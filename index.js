@@ -15,7 +15,7 @@ const bots = [
 ];
 
 function relDiff(a, b) {
-  return 100 * ((a - b) / ((a + b) / 2));
+  return 100 * Math.abs((a - b) / ((a + b) / 2));
 }
 
 const fetchTickerData = async (client, ticker, index) => {
@@ -37,9 +37,9 @@ const fetchTickerData = async (client, ticker, index) => {
   const arrow = diff > 0 ? "↗" : "↘";
   const plusMinus = diff > 0 ? "+" : "-";
 
-  const activityName = `${plusMinus}${Math.abs(diff)} (${plusMinus}${Math.abs(
-    percentage
-  )}%) ${arrow}`;
+  const activityName = `${plusMinus}${Math.abs(
+    diff
+  )} (${plusMinus}${percentage}%) ${arrow}`;
   console.log(activityName);
 
   const activity = {
