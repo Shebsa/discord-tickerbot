@@ -1,46 +1,36 @@
 require("dotenv").config();
 const fetch = require("node-fetch");
 
-const Binance = require("node-binance-api");
-const binance = new Binance();
+const CoinGecko = require("coingecko-api");
+const coinGeckoClient = new CoinGecko();
 
 const Discord = require("discord.js");
 
 const stockBots = [
-  {
-    token: process.env.OMX_BOT_TOKEN,
-    ticker: process.env.OMX_BOT_TICKER,
-    order: 1
-  },
-  {
-    token: process.env.SPY_BOT_TOKEN,
-    ticker: process.env.SPY_BOT_TICKER,
-    order: 2
-  },
-  {
-    token: process.env.GME_BOT_TOKEN,
-    ticker: process.env.GME_BOT_TICKER,
-    order: 1
-  },
-  {
-    token: process.env.AMC_BOT_TOKEN,
-    ticker: process.env.AMC_BOT_TICKER,
-    order: 2
-  },
+  // {
+  //   token: process.env.GME_BOT_TOKEN,
+  //   ticker: process.env.GME_BOT_TICKER,
+  //   order: 1,
+  // },
+  // {
+  //   token: process.env.AMC_BOT_TOKEN,
+  //   ticker: process.env.AMC_BOT_TICKER,
+  //   order: 2,
+  // },
 ];
 
 const cryptoBots = [
   {
-    token: process.env.BTC_BOT_TOKEN,
+    token: process.env.GME_BOT_TOKEN,
     ticker: process.env.BTC_BOT_TICKER,
     currency: "USD",
-    order: 1
+    order: 1,
   },
   {
-    token: process.env.ETH_BOT_TOKEN,
+    token: process.env.AMC_BOT_TOKEN,
     ticker: process.env.ETH_BOT_TICKER,
     currency: "USD",
-    order: 2
+    order: 2,
   },
 ];
 
@@ -120,25 +110,34 @@ const fetchTickerData = async (client, bot, index) => {
   setNameColor(guild, diff);
 };
 
-const fetchCryptoTicker = async (client, bot, index) => {
-  binance.websockets.prevDay(bot.ticker, async (_, response) => {
-    const guild = await client.guilds.fetch(process.env.GUILD_ID);
-
-    setName(
-      guild,
-      bot.order,
-      parseFloat(response.averagePrice).toFixed(2),
-      bot.currency
-    );
-
-    setSubtitle(
-      parseFloat(response.priceChange).toFixed(2),
-      parseFloat(response.percentChange).toFixed(2),
-      client
-    );
-
-    setNameColor(guild, parseFloat(response.priceChange));
+const fetchCryptoTicker = async (client, bot) => {
+  const response = await coinGeckoClient.coins.fetch(bot.ticker, {
+    tickers: false,
+    market_data: true,
+    community_data: false,
+    developer_data: false,
+    localization: false,
+    sparkline: false,
   });
+
+  console.info(response.data.market_data.current_price.usd);
+  const guild = await client.guilds.fetch(process.env.GUILD_ID);
+  setName(
+    guild,
+    bot.order,
+    response.data.market_data.current_price.usd,
+    bot.currency
+  );
+  setSubtitle(
+    response.data.market_data.price_change_24h_in_currency.usd,
+    response.data.market_data.price_change_percentage_24h.toFixed(2),
+    client
+  );
+
+  setNameColor(
+    guild,
+    response.data.market_data.price_change_24h_in_currency.usd
+  );
 };
 
 stockBots.forEach((bot, index) => {
@@ -147,19 +146,20 @@ stockBots.forEach((bot, index) => {
 
   client.on("ready", () => {
     console.log(`Logged in as ${client.user.tag}`);
-    fetchTickerData(client, bot, index);
     setInterval(function () {
       fetchTickerData(client, bot, index);
     }, 5000);
   });
 });
 
-cryptoBots.forEach((bot, index) => {
+cryptoBots.forEach((bot) => {
   const client = new Discord.Client();
   client.login(bot.token);
 
   client.on("ready", () => {
     console.log(`Logged in as ${client.user.tag}`);
-    fetchCryptoTicker(client, bot, index);
+    setInterval(function () {
+      fetchCryptoTicker(client, bot);
+    }, 20000);
   });
 });
